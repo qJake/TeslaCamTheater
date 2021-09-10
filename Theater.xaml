@@ -1,0 +1,27 @@
+﻿<Window x:Class="TeslaCamTheater.Theater"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TeslaCamTheater"
+        mc:Ignorable="d"
+        DataContext="{Binding RelativeSource={RelativeSource Self}}"
+        Title="Theater" Height="450" Width="800">
+    <Grid>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <MediaElement Grid.Row="0" Grid.Column="0" Source="{Binding CurrentClipset.FrontCamera}" LoadedBehavior="Play" UnloadedBehavior="Pause" Stretch="Fill" />
+            <MediaElement Grid.Row="0" Grid.Column="1" Source="{Binding CurrentClipset.RearCamera}" LoadedBehavior="Play" UnloadedBehavior="Pause" Stretch="Fill" />
+            <MediaElement Grid.Row="1" Grid.Column="0" Source="{Binding CurrentClipset.LeftRepeaterCamera}" LoadedBehavior="Play" UnloadedBehavior="Pause" Stretch="Fill" />
+            <MediaElement Grid.Row="1" Grid.Column="1" Source="{Binding CurrentClipset.RightRepeaterCamera}" LoadedBehavior="Play" UnloadedBehavior="Pause" Stretch="Fill" />
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,39 @@
+﻿<Window x:Class="TeslaCamTheater.Welcome"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TeslaCamTheater"
+        mc:Ignorable="d"
+        Title="TeslaCam Theater" Height="600" Width="900">
+    <Grid Style="{StaticResource WelcomeScreen}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Orientation="Vertical" Grid.Row="1" Grid.Column="1">
+            <TextBlock Text="TeslaCam" Style="{StaticResource SubHeader}"></TextBlock>
+            <TextBlock Text="Theater" Style="{StaticResource Header}"></TextBlock>
+            
+            <Button Content="Browse..." Style="{StaticResource BrowseButton}" Click="Browse_Click" />
+            
+            <TextBlock Text="Select your TeslaCam folder." Style="{StaticResource ExplanationText}" />
+            <TextBlock Text="(This is the folder with RecentClips, SentryClips, and SavedClips inside of it.)" Style="{StaticResource ExplanationText}" FontSize="12px" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource BaseText}" FontSize="11px" Text="v0.0.1 (Beta)" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="5" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource BaseText}" FontSize="11px" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5">
+            "Tesla" and the "T" Logo are registered trademarks of Tesla, Inc.<LineBreak />
+            This application is not affiliated with or endorsed by Tesla, Inc.<LineBreak />
+            The author(s) of this software are not liable for any damages to your files. <LineBreak />
+            It is your repsonsibility to ensure your files are backed up sufficiently. Use this software at your own risk.
+        </TextBlock>
+    </Grid>
+</Window>
