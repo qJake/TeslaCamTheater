@@ -1,11 +1,11 @@
-﻿using Microsoft.WindowsAPICodePack.Shell;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.WindowsAPICodePack.Shell;
+using Newtonsoft.Json;
 using TeslaCamTheater.Exceptions;
 using TeslaCamTheater.Models;
 
@@ -22,8 +22,13 @@ namespace TeslaCamTheater.Services
         private const string REAR_SUFFIX = "-back" + EXT;
         private const string LEFT_RPTR_SUFFIX = "-left_repeater" + EXT;
         private const string RIGHT_RPTR_SUFFIX = "-right_repeater" + EXT;
+        private const string TESLA_DATE_FORMAT = "yyyy-MM-dd_HH-mm-ss";
 
         private const int FILE_LENGTH_SKIP_THRESHOLD = 4096;
+
+        private static CultureInfo Culture => CultureInfo.DefaultThreadCurrentUICulture
+            ?? CultureInfo.DefaultThreadCurrentCulture
+            ?? CultureInfo.InvariantCulture;
 
         /// <summary>
         /// Determines if this is a TeslaCam folder or not.
@@ -88,7 +93,7 @@ namespace TeslaCamTheater.Services
 
                 var videoFileGroups = from f in new DirectoryInfo(path).GetFiles("*" + EXT)
                                       where f.Length >= FILE_LENGTH_SKIP_THRESHOLD
-                                      let prefix = GetFileTimestampPrefix(f.Name)
+                                      let prefix = GetFilePrefix(f.Name)
                                       group f by prefix into timeGroup
                                       select timeGroup;
 
@@ -97,16 +102,27 @@ namespace TeslaCamTheater.Services
                     return null;
                 }
 
-                var clipsets = from g in videoFileGroups
+                var clipsets = (from g in videoFileGroups
                                select new Clipset
                                {
-                                   StartTime = DateTime.ParseExact(GetFileTimestampPrefix(g.First().Name), "yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal),
-                                   DurationSeconds = GetVideoDuration(g.First().FullName).TotalSeconds,
-                                   FrontCamera = g.First(f => f.Name.Contains(FRONT_SUFFIX)).FullName,
-                                   RearCamera = g.First(f => f.Name.Contains(REAR_SUFFIX)).FullName,
-                                   RightRepeaterCamera = g.First(f => f.Name.Contains(RIGHT_RPTR_SUFFIX)).FullName,
-                                   LeftRepeaterCamera = g.First(f => f.Name.Contains(LEFT_RPTR_SUFFIX)).FullName
-                               };
+                                    StartTime = DateTime.ParseExact(GetFilePrefix(g.First().Name), TESLA_DATE_FORMAT, Culture, DateTimeStyles.AssumeLocal),
+                                    DurationSeconds = GetVideoDuration(g.First().FullName).TotalSeconds,
+                                    FrontCamera = g.First(f => f.Name.Contains(FRONT_SUFFIX)).FullName,
+                                    RearCamera = g.First(f => f.Name.Contains(REAR_SUFFIX)).FullName,
+                                    RightRepeaterCamera = g.First(f => f.Name.Contains(RIGHT_RPTR_SUFFIX)).FullName,
+                                    LeftRepeaterCamera = g.First(f => f.Name.Contains(LEFT_RPTR_SUFFIX)).FullName,
+                                    HasEvent = metadata.Timestamp.HasValue
+                                    && metadata.Timestamp > DateTime.ParseExact(GetFilePrefix(g.First().Name), TESLA_DATE_FORMAT, Culture, DateTimeStyles.AssumeLocal)
+                                    && metadata.Timestamp <= DateTime.ParseExact(GetFilePrefix(g.First().Name), TESLA_DATE_FORMAT, Culture, DateTimeStyles.AssumeLocal).AddSeconds(GetVideoDuration(g.First().FullName).TotalSeconds)
+                               }).ToList();
+
+                foreach (var c in clipsets)
+                {
+                    c.HasEvent = metadata.Timestamp.HasValue && metadata.Timestamp > c.StartTime && metadata.Timestamp <= c.EndTime;
+                    c.EventOffset = !c.HasEvent
+                        ? 0D
+                        : (metadata.Timestamp.Value - c.StartTime).TotalMilliseconds / (c.EndTime - c.StartTime).TotalMilliseconds;
+                }
 
                 return new Event
                 {
@@ -127,7 +143,7 @@ namespace TeslaCamTheater.Services
             }
         }
 
-        private static string GetFileTimestampPrefix(string fileName) => fileName.Replace(FRONT_SUFFIX, "").Replace(REAR_SUFFIX, "").Replace(LEFT_RPTR_SUFFIX, "").Replace(RIGHT_RPTR_SUFFIX, "");
+        private static string GetFilePrefix(string fileName) => fileName.Replace(FRONT_SUFFIX, "").Replace(REAR_SUFFIX, "").Replace(LEFT_RPTR_SUFFIX, "").Replace(RIGHT_RPTR_SUFFIX, "");
 
         /// <summary>
         /// Gets the video duration of a video file.
@@ -138,7 +154,7 @@ namespace TeslaCamTheater.Services
             try
             {
                 using var shell = ShellObject.FromParsingName(filePath);
-                return TimeSpan.FromTicks((long)(ulong)shell.Properties.System.Media.Duration.ValueAsObject);
+                return TimeSpan.FromMilliseconds((long)(ulong)shell.Properties.System.Media.Duration.ValueAsObject / 10000);
             }
             catch
             {

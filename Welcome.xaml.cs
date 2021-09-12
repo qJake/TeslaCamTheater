@@ -4,7 +4,6 @@ using System.Windows.Forms;
 using System.Windows.Interop;
 using TeslaCamTheater.Exceptions;
 using TeslaCamTheater.Services;
-
 using MessageBox = System.Windows.MessageBox;
 
 namespace TeslaCamTheater
@@ -18,8 +17,8 @@ namespace TeslaCamTheater
         {
             InitializeComponent();
         }
-
-        protected void Browse_Click(object s, EventArgs e)
+        
+        private void Browse_Click(object s, RoutedEventArgs e)
         {
             var fbd = new FolderBrowserDialog
             {

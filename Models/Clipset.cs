@@ -10,7 +10,11 @@ namespace TeslaCamTheater.Models
         public string RightRepeaterCamera { get; set; }
         public DateTime StartTime { get; set; }
         public double DurationSeconds { get; set; }
+        public bool HasEvent { get; set; }
+        public double EventOffset { get; set; }
         public DateTime EndTime => StartTime.AddSeconds(DurationSeconds);
+
+        public string StartTimeDisplay => StartTime.ToString("h:mm tt");
 
         public override string ToString()
         {

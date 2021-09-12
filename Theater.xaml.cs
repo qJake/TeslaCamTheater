@@ -1,9 +1,10 @@
-﻿using System.Collections.ObjectModel;
-using System.Linq;
+﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
-using TeslaCamTheater.Models;
-using TeslaCamTheater.Services;
+using System.Windows.Controls;
+using LibVLCSharp.Shared;
+using TeslaCamTheater.ViewModels;
+using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace TeslaCamTheater
 {
@@ -12,45 +13,169 @@ namespace TeslaCamTheater
     /// </summary>
     public partial class Theater : Window
     {
-        public static readonly DependencyProperty EventsProperty = DependencyProperty.Register(nameof(Events), typeof(ObservableCollection<Event>), typeof(Theater), new PropertyMetadata(null));
-        public static readonly DependencyProperty IsLoadingProperty = DependencyProperty.Register(nameof(IsLoading), typeof(bool), typeof(Theater), new PropertyMetadata(false));
-        public static readonly DependencyProperty CurrentClipsetProperty = DependencyProperty.Register("CurrentClipset", typeof(Clipset), typeof(Theater), new PropertyMetadata(null));
+        public TheaterViewModel ViewModel => (TheaterViewModel)Root.DataContext;
 
-        public Clipset CurrentClipset
-        {
-            get { return (Clipset)GetValue(CurrentClipsetProperty); }
-            set { SetValue(CurrentClipsetProperty, value); }
-        }
+        private bool IsSliderDragging { get; set; } = false;
 
-        public ObservableCollection<Event> Events
-        {
-            get { return (ObservableCollection<Event>)GetValue(EventsProperty); }
-            set { SetValue(EventsProperty, value); }
-        }
+        LibVLC VLC { get; set; }
 
-        public bool IsLoading
-        {
-            get { return (bool)GetValue(IsLoadingProperty); }
-            set { SetValue(IsLoadingProperty, value); }
-        }
-
-        public Theater(string camPath)
+        public Theater(string path)
         {
             InitializeComponent();
-            IsLoading = true;
+            Initialize(path);
+        }
+
+        public void Initialize(string camPath)
+        {
+            Loaded += (_, __) =>
+            {
+                ViewModel.StartInitialization(camPath);
+            };
+
+            Core.Initialize();
+            VLC = new LibVLC();
+
+            CamViewF.Loaded += (_, __) =>
+            {
+                CamViewF.MediaPlayer = new MediaPlayer(VLC);
+                CamViewF.MediaPlayer.PositionChanged += (_, __) =>
+                {
+                    if (!IsSliderDragging)
+                    {
+                        Dispatcher.Invoke(() => ViewModel.CurrentPosition = CamViewF.MediaPlayer.Position);
+                    }
+                };
+                CamViewF.MediaPlayer.EndReached += (_, __) =>
+                {
+                    Dispatcher.InvokeAsync(async () =>
+                    {
+                        await Task.Run(() =>
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                SelectNextClip();
+                            });
+                        });
+                    });
+                };
+            };
+            CamViewB.Loaded += (_, __) =>
+            {
+                CamViewB.MediaPlayer = new MediaPlayer(VLC);
+            };
+            CamViewL.Loaded += (_, __) =>
+            {
+                CamViewL.MediaPlayer = new MediaPlayer(VLC);
+            };
+            CamViewR.Loaded += (_, __) =>
+            {
+                CamViewR.MediaPlayer = new MediaPlayer(VLC);
+            };
 
             Closing += (_, __) =>
             {
                 new Welcome().Show();
             };
 
-            Task.Run(async () =>
+            Scrubber.PreviewMouseDown += (_, __) =>
             {
-                var events = await FileService.LoadEvents(camPath);
-                Dispatcher.Invoke(() => Events = new ObservableCollection<Event>(events));
-                Dispatcher.Invoke(() => CurrentClipset = Events.First().Clips.First());
-                Dispatcher.Invoke(() => IsLoading = false);
-            });
+                IsSliderDragging = true;
+                Pause();
+            };
+
+            Scrubber.ValueChanged += (_, __) =>
+            {
+                if (IsSliderDragging)
+                {
+                    ViewModel.CurrentPosition = (float)Scrubber.Value;
+                    Seek(ViewModel.CurrentPosition);
+                }
+            };
+
+            Scrubber.PreviewMouseUp += (_, __) =>
+            {
+                IsSliderDragging = false;
+                Play();
+            };
+
+            ViewModel.PropertyChanged += (s, e) =>
+            {
+                if (IsSliderDragging && e.PropertyName == nameof(TheaterViewModel.CurrentPosition))
+                {
+                    Seek(ViewModel.CurrentPosition);
+                }
+            };
+        }
+
+        private void Play()
+        {
+            CamViewF.MediaPlayer.Play();
+            CamViewB.MediaPlayer.Play();
+            CamViewL.MediaPlayer.Play();
+            CamViewR.MediaPlayer.Play();
+        }
+
+        private void Seek(float timePct)
+        {
+            CamViewF.MediaPlayer.Position = timePct;
+            CamViewB.MediaPlayer.Position = timePct;
+            CamViewL.MediaPlayer.Position = timePct;
+            CamViewR.MediaPlayer.Position = timePct;
+        }
+
+        private void Pause()
+        {
+            CamViewF.MediaPlayer.Pause();
+            CamViewB.MediaPlayer.Pause();
+            CamViewL.MediaPlayer.Pause();
+            CamViewR.MediaPlayer.Pause();
+        }
+
+        private void SelectNextClip()
+        {
+            var curSel = ClipList.SelectedIndex;
+
+            if (curSel + 1 < ViewModel.SelectedEvent.Clips.Count)
+            {
+                curSel++;
+                ClipList.SelectedIndex = curSel;
+            }
+        }
+        private void EventList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ViewModel.SelectFirstClip();
+            ViewModel.CurrentPosition = 0;
+            LoadVideoTimeline();
+            Play();
+        }
+
+        private void Clip_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ViewModel.SelectedClipset != null)
+            {
+                ViewModel.CurrentPosition = 0;
+                LoadVideoTimeline();
+                Play();
+            }
+        }
+
+        private void LoadVideoTimeline()
+        {
+            CamViewF.MediaPlayer.Media = new Media(VLC, new Uri(ViewModel.SelectedClipset.FrontCamera, UriKind.Absolute));
+            CamViewF.MediaPlayer.Pause();
+            CamViewF.MediaPlayer.Position = 0;
+
+            CamViewB.MediaPlayer.Media = new Media(VLC, new Uri(ViewModel.SelectedClipset.RearCamera, UriKind.Absolute));
+            CamViewB.MediaPlayer.Pause();
+            CamViewB.MediaPlayer.Position = 0;
+
+            CamViewL.MediaPlayer.Media = new Media(VLC, new Uri(ViewModel.SelectedClipset.LeftRepeaterCamera, UriKind.Absolute));
+            CamViewL.MediaPlayer.Pause();
+            CamViewL.MediaPlayer.Position = 0;
+
+            CamViewR.MediaPlayer.Media = new Media(VLC, new Uri(ViewModel.SelectedClipset.RightRepeaterCamera, UriKind.Absolute));
+            CamViewR.MediaPlayer.Pause();
+            CamViewR.MediaPlayer.Position = 0;
         }
     }
 }

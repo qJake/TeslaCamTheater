@@ -2,13 +2,55 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:vm="clr-namespace:TeslaCamTheater.ViewModels"
+        xmlns:m="clr-namespace:TeslaCamTheater.Models"
+        xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:TeslaCamTheater"
         mc:Ignorable="d"
-        DataContext="{Binding RelativeSource={RelativeSource Self}}"
-        Title="Theater" Height="450" Width="800">
-    <Grid>
-        <Grid>
+        Title="MainWindow" Height="700" Width="1200">
+
+    <Window.Resources>
+        <vm:TheaterViewModel x:Key="VM" />
+    </Window.Resources>
+
+    <Grid x:Name="Root" DataContext="{StaticResource VM}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" MinWidth="200">
+            <ListView ItemsSource="{Binding Events}" SelectedItem="{Binding SelectedEvent}" SelectionChanged="EventList_SelectionChanged" d:ItemsSource="{d:SampleData}">
+                <ListView.ItemTemplate>
+                    <DataTemplate DataType="{x:Type m:Event}">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="{Binding Metadata.ReasonDescription}" FontWeight="Bold" />
+                            <TextBlock Text="{Binding Metadata.City}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+        
+        <Grid Grid.Column="1">
+            <ListView x:Name="ClipList" ItemsSource="{Binding SelectedEvent.Clips}" SelectedItem="{Binding SelectedClipset}" SelectionChanged="Clip_SelectionChanged" d:ItemsSource="{d:SampleData}" HorizontalAlignment="Stretch">
+                <ListView.ItemTemplate>
+                    <DataTemplate DataType="{x:Type m:Clipset}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="{Binding StartTimeDisplay}" FontWeight="Bold" />
+                                <TextBlock Text="{Binding DurationSeconds}" />
+                            </StackPanel>
+                            <TextBlock Text="!" Margin="5,0" FontSize="24px" FontWeight="Bold" Foreground="Red" HorizontalAlignment="Right" Visibility="{Binding HasEvent, Converter={StaticResource VC}}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+        
+        <Grid Grid.Column="2" x:Name="VideoContainer">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
@@ -16,12 +58,76 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <MediaElement Grid.Row="0" Grid.Column="0" Source="{Binding CurrentClipset.FrontCamera}" LoadedBehavior="Play" UnloadedBehavior="Pause" Stretch="Fill" />
-            <MediaElement Grid.Row="0" Grid.Column="1" Source="{Binding CurrentClipset.RearCamera}" LoadedBehavior="Play" UnloadedBehavior="Pause" Stretch="Fill" />
-            <MediaElement Grid.Row="1" Grid.Column="0" Source="{Binding CurrentClipset.LeftRepeaterCamera}" LoadedBehavior="Play" UnloadedBehavior="Pause" Stretch="Fill" />
-            <MediaElement Grid.Row="1" Grid.Column="1" Source="{Binding CurrentClipset.RightRepeaterCamera}" LoadedBehavior="Play" UnloadedBehavior="Pause" Stretch="Fill" />
+            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="99" Grid.RowSpan="99" HorizontalAlignment="Center" VerticalAlignment="Center" Text="Loading..." FontSize="18px" Visibility="{Binding IsLoading, Converter={StaticResource VC}}" />
+
+            <vlc:VideoView Grid.Column="0" Grid.Row="0" x:Name="CamViewF" />
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Front" Foreground="#99FFFFFF" FontSize="24px" FontWeight="SemiBold" Panel.ZIndex="3" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <vlc:VideoView Grid.Column="1" Grid.Row="0" x:Name="CamViewB" />
+            <vlc:VideoView Grid.Column="0" Grid.Row="1" x:Name="CamViewL" />
+            <vlc:VideoView Grid.Column="1" Grid.Row="1" x:Name="CamViewR" />
+
+            <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="{Binding SelectedClipset.EventOffset, Converter={StaticResource GP}}" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="{Binding SelectedClipset.EventOffset, Converter={StaticResource GPR}}" />
+                </Grid.ColumnDefinitions>
+                
+                <Rectangle Grid.Column="1" Fill="Orange" Width="4" VerticalAlignment="Stretch" Visibility="{Binding SelectedClipset.HasEvent, Converter={StaticResource VC}}" />
+                
+                <Slider x:Name="Scrubber" Style="{StaticResource VideoScrubber}" Grid.ColumnSpan="3" IsManipulationEnabled="True" VerticalAlignment="Bottom" Margin="5" Height="30px" Minimum="0" Maximum="1" LargeChange="0.05" SmallChange="0.01" Value="{Binding CurrentPosition}" />
+                
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Column="3" Visibility="Collapsed">
+            <StackPanel Orientation="Vertical" Width="250" Margin="5">
+
+                <TextBlock Text="VM" FontWeight="Bold" FontSize="16px" Margin="0,10,0,0" />
+                <TextBlock Text="Position" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock Text="{Binding CurrentPosition}" />
+
+                <TextBlock Text="Max Length" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock Text="{Binding MaxDurationMs}" />
+                
+                <TextBlock Text="City" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock Text="{Binding SelectedEvent.Metadata.City}" />
+                
+                <TextBlock Text="Reason" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock Text="{Binding SelectedEvent.Metadata.ReasonDescription}" />
+                
+                <TextBlock Text="CamF" FontWeight="Bold" FontSize="16px" Margin="0,10,0,0" />
+                <TextBlock Text="Position" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock x:Name="DBG1_SbPosition" />
+                
+                <TextBlock Text="State" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock x:Name="DBG1_SbState" />
+
+                <TextBlock Text="CamB" FontWeight="Bold" FontSize="16px" Margin="0,10,0,0" />
+                <TextBlock Text="Position" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock x:Name="DBG2_SbPosition" />
+                
+                <TextBlock Text="State" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock x:Name="DBG2_SbState" />
+
+                <TextBlock Text="CamL" FontWeight="Bold" FontSize="16px" Margin="0,10,0,0" />
+                <TextBlock Text="Position" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock x:Name="DBG3_SbPosition" />
+                
+                <TextBlock Text="State" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock x:Name="DBG3_SbState" />
+
+                <TextBlock Text="CamR" FontWeight="Bold" FontSize="16px" Margin="0,10,0,0" />
+                <TextBlock Text="Position" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock x:Name="DBG4_SbPosition" />
+                
+                <TextBlock Text="State" FontWeight="Bold" Margin="0,10,0,0" />
+                <TextBlock x:Name="DBG4_SbState" />
+
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>

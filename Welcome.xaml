@@ -3,9 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:TeslaCamTheater"
         mc:Ignorable="d"
-        Title="TeslaCam Theater" Height="600" Width="900">
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Title="MainWindow" Height="650" Width="950">
+    
     <Grid Style="{StaticResource WelcomeScreen}">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -21,7 +23,7 @@
         <StackPanel Orientation="Vertical" Grid.Row="1" Grid.Column="1">
             <TextBlock Text="TeslaCam" Style="{StaticResource SubHeader}"></TextBlock>
             <TextBlock Text="Theater" Style="{StaticResource Header}"></TextBlock>
-            
+
             <Button Content="Browse..." Style="{StaticResource BrowseButton}" Click="Browse_Click" />
             
             <TextBlock Text="Select your TeslaCam folder." Style="{StaticResource ExplanationText}" />

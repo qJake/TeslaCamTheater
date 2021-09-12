@@ -1,4 +1,9 @@
-﻿using System.Windows;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
 
 [assembly: ThemeInfo(
     ResourceDictionaryLocation.None, //where theme specific resource dictionaries are located
@@ -12,9 +17,18 @@
 namespace TeslaCamTheater
 {
     /// <summary>
-    /// Interaction logic for App.xaml
+    /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
     public partial class App : Application
     {
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            this.DispatcherUnhandledException += (_, ex) =>
+            {
+                MessageBox.Show($"Unhandled app exception.\r\n\r\n{ex.Exception.GetType().FullName}: {ex.Exception.Message}\r\n\r\nThe application will now quit.");
+                Environment.Exit(-1);
+            };
+            base.OnStartup(e);
+        }
     }
 }

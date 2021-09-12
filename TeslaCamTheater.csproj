@@ -1,26 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net5.0-windows</TargetFramework>
+        <AssemblyName>TeslaCamTheater</AssemblyName>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <Platforms>x86;x64</Platforms>
+        <RuntimeIdentifiers>win10-x86;win10-x64</RuntimeIdentifiers>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <UseWPF>true</UseWPF>
+        <UseWindowsForms>true</UseWindowsForms>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net5.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-  </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="LibVLCSharp.WPF" Version="3.6.0" />
+        <PackageReference Include="Microsoft.WindowsAPICodePack-Core" Version="1.1.0.2" />
+        <PackageReference Include="Microsoft.WindowsAPICodePack-Shell" Version="1.1.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+        <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.16" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="Assets\*" />
-  </ItemGroup>
+    <ItemGroup>
+        <Compile Remove="TeslaCamTheater %28Package%29\**" />
+        <EmbeddedResource Remove="TeslaCamTheater %28Package%29\**" />
+        <None Remove="TeslaCamTheater %28Package%29\**" />
+        <Page Remove="TeslaCamTheater %28Package%29\**" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="Assets\*">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="WinCopies.WindowsAPICodePack.Shell" Version="2.8.0" />
-  </ItemGroup>
-
+    <ItemGroup>
+        <None Remove=".editorconfig" />
+        <None Remove="README.md" />
+    </ItemGroup>
 </Project>
